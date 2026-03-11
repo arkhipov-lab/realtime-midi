@@ -3,6 +3,7 @@ from typing import List, Tuple
 from models.chord_candidate import ChordCandidate
 from theory.notes import NOTE_NAMES_SHARP
 from theory.spelling import get_note_name_in_chord_context
+from .chord_display import simplify_chord_name
 
 
 def format_chord_with_slash(chord_name: str, root_pc: int, notes: List[int], pattern: Tuple[int, ...]) -> str:
@@ -24,9 +25,11 @@ def format_chord_with_slash(chord_name: str, root_pc: int, notes: List[int], pat
 
 
 def format_candidate_chord_name(candidate: ChordCandidate) -> str:
+    simplified_name = simplify_chord_name(candidate.chord_name)
+
     if not candidate.is_slash:
         return format_chord_with_slash(
-            chord_name=candidate.chord_name,
+            chord_name=simplified_name,
             root_pc=candidate.root_pc,
             notes=candidate.used_notes,
             pattern=candidate.pattern,
@@ -42,4 +45,4 @@ def format_candidate_chord_name(candidate: ChordCandidate) -> str:
     else:
         bass_name = NOTE_NAMES_SHARP[bass_pc]
 
-    return f'{candidate.chord_name}/{bass_name}'
+    return f'{simplified_name}/{bass_name}'

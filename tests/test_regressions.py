@@ -14,7 +14,7 @@ def test_power_chord_with_doubled_root():
 
 
 def test_incomplete_dominant_seventh():
-    assert detect_name([55, 62, 65]) == 'G7(no3)'  # G D F
+    assert detect_name([55, 62, 65]) == 'G7'  # G D F
 
 
 def test_non_chord_bass_case_current_behavior():
