@@ -137,6 +137,14 @@ def run_midi_listener(
                         # Только теперь анализируем новый аккорд
                         analysis = analyze_notes_stateless(pending_notes)
 
+                        if analysis.stateless_winner is None:
+                            if debug_callback is not None:
+                                debug_callback(pending_notes, None)
+
+                            print(f'{format_pressed_notes(pending_notes)} -> неизвестный аккорд')
+                            last_output_signature = pending_signature
+                            continue
+
                         if ANALYSIS_MODE == 'context':
                             context_result = context_analyzer.analyze(
                                 stateless_analysis=analysis,
@@ -153,7 +161,7 @@ def run_midi_listener(
                             print(f'DEBUG: context_winner   = {context_winner}')
                             print_context_result(context_result)
                             print_key_hypothesis_debug(history_buffer.get_all())
-
+                        
                         # Открываем новый активный аккорд
                         active_chord_signature = pending_signature
                         active_chord_started_at = now
