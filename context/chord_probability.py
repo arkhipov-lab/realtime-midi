@@ -38,6 +38,21 @@ CADENCE_WEIGHTS = {
 }
 
 
+def get_context_confidence_multiplier(candidate: ChordCandidate) -> float:
+    chord_name = candidate.chord_name
+
+    if chord_name.endswith('5'):
+        return 0.35
+
+    if '(no' in chord_name:
+        return 0.8
+
+    if any(tag in chord_name for tag in ('sus4(no3)', 'sus2sus4', 'cluster5', '5add9')):
+        return 0.65
+
+    return 1.0
+
+
 def build_context_score_breakdown(
     candidate: ChordCandidate,
     key_hypothesis: Optional[KeyHypothesis],
@@ -50,12 +65,15 @@ def build_context_score_breakdown(
     if key_hypothesis is not None:
         functional_label = detect_functional_label(candidate, key_hypothesis)
         cadence_label = detect_cadence_label(previous_functional_label, functional_label)
+        multiplier = get_context_confidence_multiplier(candidate)
 
         if functional_label is not None:
-            functional_bonus = FUNCTION_WEIGHTS.get(functional_label, 0)
+            raw_functional_bonus = FUNCTION_WEIGHTS.get(functional_label, 0)
+            functional_bonus = int(round(raw_functional_bonus * multiplier))
 
         if cadence_label is not None:
-            cadence_bonus = CADENCE_WEIGHTS.get(cadence_label, 0)
+            raw_cadence_bonus = CADENCE_WEIGHTS.get(cadence_label, 0)
+            cadence_bonus = int(round(raw_cadence_bonus * multiplier))
 
     return ContextScoreBreakdown(
         base_score=candidate.score,
