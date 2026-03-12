@@ -3,6 +3,7 @@ from models.stateless_analysis import StatelessAnalysis
 from models.chord_candidate import ChordCandidate
 from context.history_buffer import ChordHistoryBuffer
 from context.key_hypothesis import detect_key_hypothesis
+from context.functional_label import detect_functional_label
 
 
 class ContextAnalyzer:
@@ -53,11 +54,17 @@ class ContextAnalyzer:
         key_hypothesis = detect_key_hypothesis(history_buffer.get_all())
 
         if latest_event is None or latest_event.analysis.stateless_winner is None:
+            passthrough_winner = stateless_analysis.stateless_winner
+            functional_label = detect_functional_label(
+                candidate=passthrough_winner,
+                key_hypothesis=key_hypothesis,
+            )
+
             return ContextAnalysisResult(
-                context_winner=stateless_analysis.stateless_winner,
+                context_winner=passthrough_winner,
                 ranked_candidates=stateless_analysis.ranked_candidates,
                 key_hypothesis=key_hypothesis,
-                functional_label=None,
+                functional_label=functional_label,
                 cadence_label=None,
                 movement_label=None,
                 explanation='Context analyzer: no history, passthrough to stateless winner',
@@ -80,11 +87,16 @@ class ContextAnalyzer:
         if context_winner is not None:
             movement_label = self._get_movement_label(previous_root_pc, context_winner.root_pc)
 
+        functional_label = detect_functional_label(
+            candidate=context_winner,
+            key_hypothesis=key_hypothesis,
+        )
+
         return ContextAnalysisResult(
             context_winner=context_winner,
             ranked_candidates=ranked_candidates,
             key_hypothesis=key_hypothesis,
-            functional_label=None,
+            functional_label=functional_label,
             cadence_label=None,
             movement_label=movement_label,
             explanation=f'Context analyzer: applied root movement bonus from previous root_pc={previous_root_pc}',
