@@ -1,6 +1,30 @@
 from context.chord_probability import score_candidate_in_context
 from models.chord_candidate import ChordCandidate
 from models.key_hypothesis import KeyHypothesis
+from context.chord_probability import build_context_score_breakdown
+from models.key_hypothesis import KeyHypothesis
+
+
+def test_power_chord_gets_reduced_movement_bonus():
+    key = KeyHypothesis(tonic_pc=0, mode='minor', score=100)
+
+    power = make_candidate('G5', 7)
+    full = make_candidate('Gm', 7)
+
+    power_breakdown = build_context_score_breakdown(
+        candidate=power,
+        key_hypothesis=key,
+        previous_functional_label='III',
+        movement_bonus=24,
+    )
+    full_breakdown = build_context_score_breakdown(
+        candidate=full,
+        key_hypothesis=key,
+        previous_functional_label='III',
+        movement_bonus=24,
+    )
+
+    assert power_breakdown.movement_bonus < full_breakdown.movement_bonus
 
 
 def make_candidate(name: str, root_pc: int) -> ChordCandidate:

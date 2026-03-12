@@ -62,10 +62,12 @@ def build_context_score_breakdown(
     functional_bonus = 0
     cadence_bonus = 0
 
+    multiplier = get_context_confidence_multiplier(candidate)
+    adjusted_movement_bonus = int(round(movement_bonus * multiplier))
+
     if key_hypothesis is not None:
         functional_label = detect_functional_label(candidate, key_hypothesis)
         cadence_label = detect_cadence_label(previous_functional_label, functional_label)
-        multiplier = get_context_confidence_multiplier(candidate)
 
         if functional_label is not None:
             raw_functional_bonus = FUNCTION_WEIGHTS.get(functional_label, 0)
@@ -77,7 +79,7 @@ def build_context_score_breakdown(
 
     return ContextScoreBreakdown(
         base_score=candidate.score,
-        movement_bonus=movement_bonus,
+        movement_bonus=adjusted_movement_bonus,
         functional_bonus=functional_bonus,
         cadence_bonus=cadence_bonus,
     )
