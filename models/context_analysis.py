@@ -3,6 +3,7 @@ from typing import List, Optional
 
 from .chord_candidate import ChordCandidate
 from .key_hypothesis import KeyHypothesis
+from .context_score_breakdown import ContextScoreBreakdown
 
 
 @dataclass
@@ -15,5 +16,6 @@ class ContextAnalysisResult:
     cadence_label: Optional[str]
     movement_label: Optional[str]
     explanation: Optional[str]
-    
+    score_breakdowns: dict[str, ContextScoreBreakdown]
+        
     

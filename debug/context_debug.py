@@ -1,5 +1,6 @@
 from models.context_analysis import ContextAnalysisResult
 from theory.notes import pitch_class_to_name
+from models.context_score_breakdown import ContextScoreBreakdown
 
 
 def format_key_hypothesis(key_hypothesis) -> str:
@@ -7,6 +8,32 @@ def format_key_hypothesis(key_hypothesis) -> str:
         return 'None'
     tonic = pitch_class_to_name(key_hypothesis.tonic_pc)
     return f'{tonic} {key_hypothesis.mode} ({key_hypothesis.score})'
+
+
+def format_context_top_candidates(result: ContextAnalysisResult, limit: int = 3) -> str:
+    top = result.ranked_candidates[:limit]
+    if not top:
+        return '[]'
+
+    parts = []
+    for candidate in top:
+        breakdown = result.score_breakdowns.get(candidate.chord_name)
+
+        if breakdown is None:
+            parts.append(f'{candidate.chord_name}({candidate.score})')
+            continue
+
+        parts.append(
+            f'{candidate.chord_name}('
+            f'base={breakdown.base_score},'
+            f'move={breakdown.movement_bonus},'
+            f'func={breakdown.functional_bonus},'
+            f'cad={breakdown.cadence_bonus},'
+            f'total={breakdown.total_score}'
+            f')'
+        )
+
+    return '[' + ', '.join(parts) + ']'
 
 
 def print_context_result(result: ContextAnalysisResult) -> None:
@@ -17,15 +44,7 @@ def print_context_result(result: ContextAnalysisResult) -> None:
     else:
         print('DEBUG: context_winner = None')
 
-    if result.ranked_candidates:
-        formatted = ', '.join(
-            f'{candidate.chord_name}({candidate.score})'
-            for candidate in result.ranked_candidates[:3]
-        )
-        print(f'DEBUG: context_top3 = [{formatted}]')
-    else:
-        print('DEBUG: context_top3 = []')
-
+    print(f'DEBUG: context_top3 = {format_context_top_candidates(result, limit=3)}')
     print(f'DEBUG: key_hypothesis = {format_key_hypothesis(result.key_hypothesis)}')
     print(f'DEBUG: previous_functional_label = {result.previous_functional_label}')
     print(f'DEBUG: functional_label = {result.functional_label}')
