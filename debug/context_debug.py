@@ -27,6 +27,7 @@ def print_context_result(result: ContextAnalysisResult) -> None:
         print('DEBUG: context_top3 = []')
 
     print(f'DEBUG: key_hypothesis = {format_key_hypothesis(result.key_hypothesis)}')
+    print(f'DEBUG: previous_functional_label = {result.previous_functional_label}')
     print(f'DEBUG: functional_label = {result.functional_label}')
     print(f'DEBUG: cadence_label = {result.cadence_label}')
     print(f'DEBUG: movement_label = {result.movement_label}')

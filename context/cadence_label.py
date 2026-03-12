@@ -26,6 +26,9 @@ def detect_cadence_label(
     if previous_functional_label == 'ii' and current_functional_label == 'V':
         return 'predominant-to-dominant'
 
+    if previous_functional_label == 'ii°' and current_functional_label == 'V':
+        return 'predominant-to-dominant-minor'
+
     if previous_functional_label == 'iv' and current_functional_label == 'V':
         return 'predominant-to-dominant-minor'
 
@@ -36,4 +39,18 @@ def detect_cadence_label(
     if previous_functional_label == 'V' and current_functional_label == 'VI':
         return 'deceptive-cadence-minor'
 
+    # Half cadence: anything meaningful -> V
+    if current_functional_label == 'V' and previous_functional_label in {
+        'I', 'i', 'ii', 'ii°', 'iii', 'III', 'IV', 'iv', 'vi', 'VI'
+    }:
+        return 'half-cadence'
+
+    # Back-relations / tonic return hints
+    if previous_functional_label == 'V' and current_functional_label == 'III':
+        return 'dominant-to-mediant'
+
+    if previous_functional_label == 'V' and current_functional_label == 'VI':
+        return 'deceptive-cadence-minor'
+
     return None
+

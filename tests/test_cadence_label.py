@@ -36,3 +36,13 @@ def test_detect_deceptive_cadence_minor():
 def test_detect_cadence_label_unknown_case():
     assert detect_cadence_label('iii', 'IV') is None
     
+def test_detect_half_cadence():
+    assert detect_cadence_label('I', 'V') == 'half-cadence'
+    assert detect_cadence_label('ii', 'V') == 'predominant-to-dominant'
+    assert detect_cadence_label('IV', 'V') == 'half-cadence'
+
+
+def test_detect_dominant_to_mediant():
+    assert detect_cadence_label('V', 'III') == 'dominant-to-mediant'
+    
+    
