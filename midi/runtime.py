@@ -12,9 +12,8 @@ from midi.live_state import (
     is_pending_ready,
     update_pending_state,
 )
-from pipeline.harmonic_processor import process_note_segment
+from pipeline.harmonic_processor import process_chord_snapshot
 from rendering.cli_renderer import render_stateless_snapshot
-from models.note_segment import NoteSegment
 
 
 DebugCallback = Callable[[List[int], object], None]
@@ -67,13 +66,9 @@ def run_midi_listener(
                     if render_result.text:
                         print(render_result.text)
                 else:
-                    segment = NoteSegment(
+                    result = process_chord_snapshot(
                         notes=pending_notes,
-                        timestamp=now,
-                    )
-
-                    result = process_note_segment(
-                        segment=segment,
+                        now=now,
                         state=state,
                         history_buffer=history_buffer,
                         context_analyzer=context_analyzer,

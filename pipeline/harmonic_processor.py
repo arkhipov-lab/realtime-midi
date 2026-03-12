@@ -11,7 +11,6 @@ from detection.stateless_analyzer import analyze_notes_stateless
 from midi.live_state import LiveRuntimeState
 from models.processing_result import ProcessingResult
 from rendering.cli_renderer import render_best_candidate_or_unknown
-from models.note_segment import NoteSegment
 
 
 def close_active_chord_if_needed(
@@ -40,18 +39,15 @@ def close_active_chord_if_needed(
         print_recent_chords(history_buffer.get_all())
 
 
-def process_note_segment(
+def process_chord_snapshot(
     *,
-    segment: NoteSegment,
+    notes: List[int],
+    now: float,
     state: LiveRuntimeState,
     history_buffer: ChordHistoryBuffer,
     context_analyzer: ContextAnalyzer,
     debug_callback,
 ) -> ProcessingResult:
-    
-    notes = segment.notes
-    now = segment.timestamp
-    
     close_active_chord_if_needed(
         state=state,
         now=now,
