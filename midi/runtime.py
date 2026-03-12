@@ -4,48 +4,19 @@ import time
 import mido
 
 from config import STABILIZE_MS, CHORD_BUFFER_SIZE
-from detection.candidate_selector import choose_best_chord_candidate
-from formatting.candidate_formatting import format_candidate_notes
-from formatting.chord_name import format_candidate_chord_name
-from formatting.chord_notes import format_pressed_notes
-from theory.intervals import get_interval_name
-from theory.notes import midi_note_to_name
 from context.history_buffer import ChordHistoryBuffer
 from context.context_analyzer import ContextAnalyzer
 from midi.live_state import (
     apply_midi_note_event,
-    build_signature,
     create_live_runtime_state,
     is_pending_ready,
     update_pending_state,
 )
 from pipeline.harmonic_processor import process_chord_snapshot
+from rendering.cli_renderer import render_stateless_snapshot
 
 
 DebugCallback = Callable[[List[int], object], None]
-
-
-def render_detection(notes: List[int], debug_callback: Optional[DebugCallback] = None) -> str:
-    signature = build_signature(notes)
-    if signature is None:
-        return ''
-
-    if signature[0] == 'interval':
-        note1, note2 = notes[0], notes[1]
-        interval_name = get_interval_name(note1, note2)
-        return f'{midi_note_to_name(note1)} + {midi_note_to_name(note2)} -> {interval_name}'
-
-    best_candidate = choose_best_chord_candidate(notes)
-
-    if debug_callback is not None:
-        debug_callback(notes, best_candidate)
-
-    if best_candidate:
-        formatted_notes = format_candidate_notes(best_candidate)
-        formatted_name = format_candidate_chord_name(best_candidate)
-        return f'{formatted_notes} -> {formatted_name}'
-
-    return f'{format_pressed_notes(notes)} -> неизвестный аккорд'
 
 
 def run_midi_listener(
@@ -88,9 +59,12 @@ def run_midi_listener(
                     continue
 
                 if pending_signature[0] == 'interval':
-                    output = render_detection(pending_notes, debug_callback=debug_callback)
-                    if output:
-                        print(output)
+                    render_result = render_stateless_snapshot(
+                        pending_notes,
+                        debug_callback=debug_callback,
+                    )
+                    if render_result.text:
+                        print(render_result.text)
                 else:
                     result = process_chord_snapshot(
                         notes=pending_notes,

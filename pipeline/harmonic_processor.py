@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List
 
 from config import ANALYSIS_MODE
 from context.context_analyzer import ContextAnalyzer
@@ -8,11 +8,9 @@ from context.history_debug import print_recent_chords
 from debug.context_debug import print_context_result
 from debug.key_hypothesis_debug import print_key_hypothesis_debug
 from detection.stateless_analyzer import analyze_notes_stateless
-from formatting.candidate_formatting import format_candidate_notes
-from formatting.chord_name import format_candidate_chord_name
-from formatting.chord_notes import format_pressed_notes
 from midi.live_state import LiveRuntimeState
 from models.processing_result import ProcessingResult
+from rendering.cli_renderer import render_best_candidate_or_unknown
 
 
 def close_active_chord_if_needed(
@@ -60,12 +58,12 @@ def process_chord_snapshot(
     analysis = analyze_notes_stateless(notes)
 
     if analysis.stateless_winner is None:
-        output_text = f'{format_pressed_notes(notes)} -> неизвестный аккорд'
+        render_result = render_best_candidate_or_unknown(notes, None)
         return ProcessingResult(
             analysis=analysis,
             best_candidate=None,
             context_result=None,
-            output_text=output_text,
+            output_text=render_result.text,
         )
 
     context_result = None
@@ -91,10 +89,8 @@ def process_chord_snapshot(
     state.active_chord_started_at = now
     state.active_chord_analysis = analysis
 
-    if best_candidate is not None:
-        output_text = f'{format_candidate_notes(best_candidate)} -> {format_candidate_chord_name(best_candidate)}'
-    else:
-        output_text = f'{format_pressed_notes(notes)} -> неизвестный аккорд'
+    render_result = render_best_candidate_or_unknown(notes, best_candidate)
+    output_text = render_result.text
 
     return ProcessingResult(
         analysis=analysis,
