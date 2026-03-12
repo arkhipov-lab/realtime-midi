@@ -20,6 +20,63 @@ def make_candidate(name: str, root_pc: int, score: int) -> ChordCandidate:
     )
 
 
+def test_context_analyzer_adds_movement_label():
+    analyzer = ContextAnalyzer()
+    history = ChordHistoryBuffer(max_size=8)
+
+    previous_winner = make_candidate('G7', 7, 520)
+    previous_analysis = StatelessAnalysis(
+        notes=[43, 47, 50, 53],
+        candidates=[previous_winner],
+        ranked_candidates=[previous_winner],
+        stateless_winner=previous_winner,
+        bass_note=43,
+        highest_note=53,
+    )
+
+    previous_event = ChordEvent(
+        timestamp_start=1.0,
+        timestamp_end=1.5,
+        duration_ms=500.0,
+        analysis=previous_analysis,
+        bass_pc=7,
+        highest_pc=5,
+    )
+    history.add(previous_event)
+
+    current_candidate = make_candidate('C6', 0, 490)
+    current_analysis = StatelessAnalysis(
+        notes=[36, 40, 43, 45],
+        candidates=[current_candidate],
+        ranked_candidates=[current_candidate],
+        stateless_winner=current_candidate,
+        bass_note=36,
+        highest_note=45,
+    )
+
+    result = analyzer.analyze(
+        stateless_analysis=current_analysis,
+        history_buffer=history,
+    )
+
+    assert result.context_winner == current_candidate
+    assert result.movement_label == 'dominant-like'
+
+
+def make_candidate(name: str, root_pc: int, score: int) -> ChordCandidate:
+    return ChordCandidate(
+        chord_name=name,
+        root_pc=root_pc,
+        pattern=(0, 4, 7),
+        used_notes=[60, 64, 67],
+        full_notes=[60, 64, 67],
+        bass_note=60,
+        is_slash=False,
+        ignored_notes_count=0,
+        score=score,
+    )
+
+
 def test_context_analyzer_passthrough_without_history():
     analyzer = ContextAnalyzer()
     history = ChordHistoryBuffer(max_size=8)

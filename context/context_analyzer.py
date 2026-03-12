@@ -12,8 +12,6 @@ class ContextAnalyzer:
     ) -> int:
         interval = (candidate.root_pc - previous_root_pc) % 12
 
-        # Самые естественные движения:
-        # по кварте/квинте, по секунде, удержание центра
         if interval in (5, 7):   # P4 / P5
             return 24
         if interval in (1, 2, 10, 11):  # stepwise
@@ -25,6 +23,26 @@ class ContextAnalyzer:
 
         return 0
 
+    def _get_movement_label(
+        self,
+        previous_root_pc: int,
+        current_root_pc: int,
+    ) -> str:
+        interval = (current_root_pc - previous_root_pc) % 12
+
+        if interval == 0:
+            return 'same-root'
+        if interval in (1, 2, 10, 11):
+            return 'step-motion'
+        if interval in (3, 4, 8, 9):
+            return 'third-motion'
+        if interval == 5:
+            return 'dominant-like'
+        if interval == 7:
+            return 'subdominant-like'
+
+        return 'other-motion'
+
     def analyze(
         self,
         stateless_analysis: StatelessAnalysis,
@@ -32,7 +50,6 @@ class ContextAnalyzer:
     ) -> ContextAnalysisResult:
         latest_event = history_buffer.get_latest()
 
-        # Если истории нет — passthrough
         if latest_event is None or latest_event.analysis.stateless_winner is None:
             return ContextAnalysisResult(
                 context_winner=stateless_analysis.stateless_winner,
@@ -40,6 +57,7 @@ class ContextAnalyzer:
                 key_hypothesis=None,
                 functional_label=None,
                 cadence_label=None,
+                movement_label=None,
                 explanation='Context analyzer: no history, passthrough to stateless winner',
             )
 
@@ -55,6 +73,10 @@ class ContextAnalyzer:
         )
 
         context_winner = ranked_candidates[0] if ranked_candidates else None
+        movement_label = None
+
+        if context_winner is not None:
+            movement_label = self._get_movement_label(previous_root_pc, context_winner.root_pc)
 
         return ContextAnalysisResult(
             context_winner=context_winner,
@@ -62,6 +84,7 @@ class ContextAnalyzer:
             key_hypothesis=None,
             functional_label=None,
             cadence_label=None,
+            movement_label=movement_label,
             explanation=f'Context analyzer: applied root movement bonus from previous root_pc={previous_root_pc}',
         )
         

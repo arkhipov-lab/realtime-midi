@@ -21,8 +21,7 @@ def print_context_result(result: ContextAnalysisResult) -> None:
     print(f'DEBUG: key_hypothesis = {result.key_hypothesis}')
     print(f'DEBUG: functional_label = {result.functional_label}')
     print(f'DEBUG: cadence_label = {result.cadence_label}')
+    print(f'DEBUG: movement_label = {result.movement_label}')
     print(f'DEBUG: explanation = {result.explanation}')
     print('DEBUG: ==========================\n')
-    
-    
     

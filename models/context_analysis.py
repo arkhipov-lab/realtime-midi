@@ -11,5 +11,6 @@ class ContextAnalysisResult:
     key_hypothesis: Optional[str]
     functional_label: Optional[str]
     cadence_label: Optional[str]
+    movement_label: Optional[str]
     explanation: Optional[str]
     
