@@ -1,4 +1,4 @@
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, List, Optional
 import time
 
 import mido
@@ -17,23 +17,16 @@ from context.history_debug import print_recent_chords
 from context.context_analyzer import ContextAnalyzer
 from debug.context_debug import print_context_result
 from debug.key_hypothesis_debug import print_key_hypothesis_debug
+from midi.live_state import (
+    apply_midi_note_event,
+    build_signature,
+    create_live_runtime_state,
+    is_pending_ready,
+    update_pending_state,
+)
 
 
-Signature = Tuple[str, Tuple[int, ...]]
 DebugCallback = Callable[[List[int], object], None]
-
-
-def build_signature(notes: List[int]) -> Optional[Signature]:
-    unique_pitch_classes_count = len(set(note % 12 for note in notes))
-    pressed_notes_count = len(notes)
-
-    if unique_pitch_classes_count < 2:
-        return None
-
-    if unique_pitch_classes_count == 2 and pressed_notes_count == 2:
-        return ('interval', tuple(notes))
-
-    return ('chord_detect', tuple(notes))
 
 
 def render_detection(notes: List[int], debug_callback: Optional[DebugCallback] = None) -> str:
@@ -64,15 +57,7 @@ def run_midi_listener(
     debug_callback: Optional[DebugCallback] = None,
     sleep_seconds: float = 0.005,
 ) -> None:
-    pressed_notes: Dict[Tuple[int, int], int] = {}
-
-    last_output_signature: Optional[Signature] = None
-    pending_signature: Optional[Signature] = None
-    pending_notes: Optional[List[int]] = None
-    pending_since: Optional[float] = None
-    active_chord_signature: Optional[Signature] = None
-    active_chord_started_at: Optional[float] = None
-    active_chord_analysis = None
+    state = create_live_runtime_state()
 
     history_buffer = ChordHistoryBuffer(max_size=CHORD_BUFFER_SIZE)
     context_analyzer = ContextAnalyzer()
@@ -86,99 +71,91 @@ def run_midi_listener(
                 if not (is_note_on or is_note_off):
                     continue
 
-                key = (msg.channel, msg.note)
+                unique_notes = apply_midi_note_event(
+                    state,
+                    channel=msg.channel,
+                    note=msg.note,
+                    is_note_on=is_note_on,
+                )
 
-                if is_note_on:
-                    pressed_notes[key] = msg.note
-                else:
-                    pressed_notes.pop(key, None)
-
-                unique_notes = sorted(set(pressed_notes.values()))
-                current_signature = build_signature(unique_notes)
                 now = time.perf_counter()
-
-                if current_signature is None:
-                    last_output_signature = None
-                    pending_signature = None
-                    pending_notes = None
-                    pending_since = None
-                    continue
-
-                if current_signature != pending_signature:
-                    pending_signature = current_signature
-                    pending_notes = unique_notes.copy()
-                    pending_since = now
+                update_pending_state(state, unique_notes, now)
 
             now = time.perf_counter()
 
-            if pending_signature is not None and pending_notes is not None and pending_since is not None:
-                elapsed_ms = (now - pending_since) * 1000
+            if is_pending_ready(state, STABILIZE_MS, now):
+                pending_signature = state.pending_signature
+                pending_notes = state.pending_notes
 
-                if elapsed_ms >= STABILIZE_MS and pending_signature != last_output_signature:
-                    if pending_signature[0] == 'interval':
-                        output = render_detection(pending_notes, debug_callback=debug_callback)
-                        if output:
-                            print(output)
+                if pending_signature is None or pending_notes is None:
+                    time.sleep(sleep_seconds)
+                    continue
 
-                    else:
-                        # Сначала закрываем предыдущий активный аккорд и кладём его в историю
-                        if active_chord_signature is not None and active_chord_analysis is not None and active_chord_started_at is not None:
-                            event = build_chord_event(
-                                timestamp_start=active_chord_started_at,
-                                timestamp_end=now,
-                                analysis=active_chord_analysis,
-                            )
+                if pending_signature[0] == 'interval':
+                    output = render_detection(pending_notes, debug_callback=debug_callback)
+                    if output:
+                        print(output)
 
-                            history_buffer.add(event)
+                else:
+                    if (
+                        state.active_chord_signature is not None
+                        and state.active_chord_analysis is not None
+                        and state.active_chord_started_at is not None
+                    ):
+                        event = build_chord_event(
+                            timestamp_start=state.active_chord_started_at,
+                            timestamp_end=now,
+                            analysis=state.active_chord_analysis,
+                        )
 
-                            if debug_callback is not None:
-                                print_recent_chords(history_buffer.get_all())
-
-                        # Только теперь анализируем новый аккорд
-                        analysis = analyze_notes_stateless(pending_notes)
-
-                        if analysis.stateless_winner is None:
-                            if debug_callback is not None:
-                                debug_callback(pending_notes, None)
-
-                            print(f'{format_pressed_notes(pending_notes)} -> неизвестный аккорд')
-                            last_output_signature = pending_signature
-                            continue
-
-                        if ANALYSIS_MODE == 'context':
-                            context_result = context_analyzer.analyze(
-                                stateless_analysis=analysis,
-                                history_buffer=history_buffer,
-                            )
-                            best_candidate = context_result.context_winner
-                        else:
-                            best_candidate = analysis.stateless_winner
-
-                        if ANALYSIS_MODE == 'context' and debug_callback is not None:
-                            stateless_winner = analysis.stateless_winner.chord_name if analysis.stateless_winner else 'None'
-                            context_winner = context_result.context_winner.chord_name if context_result.context_winner else 'None'
-                            print(f'DEBUG: stateless_winner = {stateless_winner}')
-                            print(f'DEBUG: context_winner   = {context_winner}')
-                            print_context_result(context_result)
-                            print_key_hypothesis_debug(history_buffer.get_all())
-                        
-                        # Открываем новый активный аккорд
-                        active_chord_signature = pending_signature
-                        active_chord_started_at = now
-                        active_chord_analysis = analysis
+                        history_buffer.add(event)
 
                         if debug_callback is not None:
-                            debug_callback(pending_notes, best_candidate)
+                            print_recent_chords(history_buffer.get_all())
 
-                        if best_candidate:
-                            formatted_notes = format_candidate_notes(best_candidate)
-                            formatted_name = format_candidate_chord_name(best_candidate)
-                            print(f'{formatted_notes} -> {formatted_name}')
-                        else:
-                            print(f'{format_pressed_notes(pending_notes)} -> неизвестный аккорд')
+                    analysis = analyze_notes_stateless(pending_notes)
 
-                    last_output_signature = pending_signature
+                    if analysis.stateless_winner is None:
+                        if debug_callback is not None:
+                            debug_callback(pending_notes, None)
+
+                        print(f'{format_pressed_notes(pending_notes)} -> неизвестный аккорд')
+                        state.last_output_signature = pending_signature
+                        time.sleep(sleep_seconds)
+                        continue
+
+                    if ANALYSIS_MODE == 'context':
+                        context_result = context_analyzer.analyze(
+                            stateless_analysis=analysis,
+                            history_buffer=history_buffer,
+                        )
+                        best_candidate = context_result.context_winner
+                    else:
+                        best_candidate = analysis.stateless_winner
+
+                    if ANALYSIS_MODE == 'context' and debug_callback is not None:
+                        stateless_winner = analysis.stateless_winner.chord_name if analysis.stateless_winner else 'None'
+                        context_winner = context_result.context_winner.chord_name if context_result.context_winner else 'None'
+                        print(f'DEBUG: stateless_winner = {stateless_winner}')
+                        print(f'DEBUG: context_winner   = {context_winner}')
+                        print_context_result(context_result)
+                        print_key_hypothesis_debug(history_buffer.get_all())
+
+                    state.active_chord_signature = pending_signature
+                    state.active_chord_started_at = now
+                    state.active_chord_analysis = analysis
+
+                    if debug_callback is not None:
+                        debug_callback(pending_notes, best_candidate)
+
+                    if best_candidate:
+                        formatted_notes = format_candidate_notes(best_candidate)
+                        formatted_name = format_candidate_chord_name(best_candidate)
+                        print(f'{formatted_notes} -> {formatted_name}')
+                    else:
+                        print(f'{format_pressed_notes(pending_notes)} -> неизвестный аккорд')
+
+                state.last_output_signature = pending_signature
 
             time.sleep(sleep_seconds)
-            
             
