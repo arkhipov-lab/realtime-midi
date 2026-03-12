@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Optional
 
 from .stateless_analysis import StatelessAnalysis
 
@@ -9,4 +10,6 @@ class ChordEvent:
     timestamp_end: float
     duration_ms: float
     analysis: StatelessAnalysis
+    bass_pc: Optional[int]
+    highest_pc: Optional[int]
     
