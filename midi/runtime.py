@@ -121,27 +121,8 @@ def run_midi_listener(
                             print(output)
 
                     else:
-                        analysis = analyze_notes_stateless(pending_notes)
-                        if ANALYSIS_MODE == 'context':
-                            context_result = context_analyzer.analyze(
-                                stateless_analysis=analysis,
-                                history_buffer=history_buffer,
-                            )
-                            best_candidate = context_result.context_winner
-                        else:
-                            best_candidate = analysis.stateless_winner
-                            
-                        if ANALYSIS_MODE == 'context' and debug_callback is not None:
-                            stateless_winner = analysis.stateless_winner.chord_name if analysis.stateless_winner else 'None'
-                            context_winner = context_result.context_winner.chord_name if context_result.context_winner else 'None'
-                            print(f'DEBUG: stateless_winner = {stateless_winner}')
-                            print(f'DEBUG: context_winner   = {context_winner}')
-                            print_context_result(context_result)
-                            print_key_hypothesis_debug(history_buffer.get_all())
-
-                        # Если уже был активный аккорд — закрываем его
+                        # Сначала закрываем предыдущий активный аккорд и кладём его в историю
                         if active_chord_signature is not None and active_chord_analysis is not None and active_chord_started_at is not None:
-
                             event = build_chord_event(
                                 timestamp_start=active_chord_started_at,
                                 timestamp_end=now,
@@ -153,7 +134,27 @@ def run_midi_listener(
                             if debug_callback is not None:
                                 print_recent_chords(history_buffer.get_all())
 
-                        # Новый активный аккорд
+                        # Только теперь анализируем новый аккорд
+                        analysis = analyze_notes_stateless(pending_notes)
+
+                        if ANALYSIS_MODE == 'context':
+                            context_result = context_analyzer.analyze(
+                                stateless_analysis=analysis,
+                                history_buffer=history_buffer,
+                            )
+                            best_candidate = context_result.context_winner
+                        else:
+                            best_candidate = analysis.stateless_winner
+
+                        if ANALYSIS_MODE == 'context' and debug_callback is not None:
+                            stateless_winner = analysis.stateless_winner.chord_name if analysis.stateless_winner else 'None'
+                            context_winner = context_result.context_winner.chord_name if context_result.context_winner else 'None'
+                            print(f'DEBUG: stateless_winner = {stateless_winner}')
+                            print(f'DEBUG: context_winner   = {context_winner}')
+                            print_context_result(context_result)
+                            print_key_hypothesis_debug(history_buffer.get_all())
+
+                        # Открываем новый активный аккорд
                         active_chord_signature = pending_signature
                         active_chord_started_at = now
                         active_chord_analysis = analysis
