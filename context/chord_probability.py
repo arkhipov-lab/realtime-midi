@@ -47,6 +47,9 @@ def get_context_confidence_multiplier(candidate: ChordCandidate) -> float:
     if '(no' in chord_name:
         return 0.8
 
+    if chord_name.endswith('sus2') or chord_name.endswith('sus4'):
+        return 0.78
+
     if any(tag in chord_name for tag in ('sus4(no3)', 'sus2sus4', 'cluster5', '5add9')):
         return 0.65
 
