@@ -7,6 +7,9 @@ from context.functional_label import detect_functional_label
 
 
 class ContextAnalyzer:
+    
+    MOVEMENT_REORDER_THRESHOLD = 12
+    
     def _get_root_movement_bonus(
         self,
         previous_root_pc: int,
@@ -45,6 +48,42 @@ class ContextAnalyzer:
 
         return 'other-motion'
 
+    def _rerank_with_movement_awareness(
+        self,
+        previous_root_pc: int,
+        candidates: list[ChordCandidate],
+    ) -> list[ChordCandidate]:
+        if not candidates:
+            return candidates
+
+        if len(candidates) == 1:
+            return candidates
+
+        top_score = candidates[0].score
+
+        close_candidates = [
+            candidate
+            for candidate in candidates
+            if (top_score - candidate.score) <= self.MOVEMENT_REORDER_THRESHOLD
+        ]
+
+        far_candidates = [
+            candidate
+            for candidate in candidates
+            if (top_score - candidate.score) > self.MOVEMENT_REORDER_THRESHOLD
+        ]
+
+        reranked_close = sorted(
+            close_candidates,
+            key=lambda candidate: (
+                candidate.score + self._get_root_movement_bonus(previous_root_pc, candidate),
+                candidate.score,
+            ),
+            reverse=True,
+        )
+
+        return reranked_close + far_candidates
+
     def analyze(
         self,
         stateless_analysis: StatelessAnalysis,
@@ -72,13 +111,9 @@ class ContextAnalyzer:
 
         previous_root_pc = latest_event.analysis.stateless_winner.root_pc
 
-        ranked_candidates = sorted(
-            stateless_analysis.ranked_candidates,
-            key=lambda candidate: (
-                candidate.score + self._get_root_movement_bonus(previous_root_pc, candidate),
-                candidate.score,
-            ),
-            reverse=True,
+        ranked_candidates = self._rerank_with_movement_awareness(
+            previous_root_pc=previous_root_pc,
+            candidates=stateless_analysis.ranked_candidates,
         )
 
         context_winner = ranked_candidates[0] if ranked_candidates else None
