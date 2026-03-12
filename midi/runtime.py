@@ -18,6 +18,8 @@ from context.history_debug import print_recent_chords
 
 from context.context_analyzer import ContextAnalyzer
 
+from debug.context_debug import print_context_result
+
 
 Signature = Tuple[str, Tuple[int, ...]]
 DebugCallback = Callable[[List[int], object], None]
@@ -130,6 +132,13 @@ def run_midi_listener(
                             best_candidate = context_result.context_winner
                         else:
                             best_candidate = analysis.stateless_winner
+                            
+                        if ANALYSIS_MODE == 'context' and debug_callback is not None:
+                            stateless_winner = analysis.stateless_winner.chord_name if analysis.stateless_winner else 'None'
+                            context_winner = context_result.context_winner.chord_name if context_result.context_winner else 'None'
+                            print(f'DEBUG: stateless_winner = {stateless_winner}')
+                            print(f'DEBUG: context_winner   = {context_winner}')
+                            print_context_result(context_result)
 
                         # Если уже был активный аккорд — закрываем его
                         if active_chord_signature is not None and active_chord_analysis is not None and active_chord_started_at is not None:
