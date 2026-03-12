@@ -1,3 +1,5 @@
+import pytest
+
 from context.event_factory import build_chord_event
 from context.history_buffer import ChordHistoryBuffer
 from detection.stateless_analyzer import analyze_notes_stateless
@@ -70,4 +72,20 @@ def test_history_buffer_clear():
     assert buffer.is_empty() is True
     assert buffer.get_latest() is None
     
+    
+def test_history_buffer_merges_identical_consecutive_events():
+    buffer = ChordHistoryBuffer(max_size=5)
+
+    event1 = make_event([36, 40, 43], 1.0, 1.5)   # C
+    event2 = make_event([36, 40, 43], 1.5, 2.2)   # same C again
+
+    buffer.add(event1)
+    buffer.add(event2)
+
+    events = buffer.get_all()
+
+    assert buffer.size() == 1
+    assert events[0].timestamp_start == 1.0
+    assert events[0].timestamp_end == 2.2
+    assert events[0].duration_ms == pytest.approx(1200.0)
     
