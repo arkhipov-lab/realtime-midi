@@ -10,15 +10,13 @@ from formatting.chord_name import format_candidate_chord_name
 from formatting.chord_notes import format_pressed_notes
 from theory.intervals import get_interval_name
 from theory.notes import midi_note_to_name
-
 from context.event_factory import build_chord_event
 from context.history_buffer import ChordHistoryBuffer
 from detection.stateless_analyzer import analyze_notes_stateless
 from context.history_debug import print_recent_chords
-
 from context.context_analyzer import ContextAnalyzer
-
 from debug.context_debug import print_context_result
+from debug.key_hypothesis_debug import print_key_hypothesis_debug
 
 
 Signature = Tuple[str, Tuple[int, ...]]
@@ -139,6 +137,7 @@ def run_midi_listener(
                             print(f'DEBUG: stateless_winner = {stateless_winner}')
                             print(f'DEBUG: context_winner   = {context_winner}')
                             print_context_result(context_result)
+                            print_key_hypothesis_debug(history_buffer.get_all())
 
                         # Если уже был активный аккорд — закрываем его
                         if active_chord_signature is not None and active_chord_analysis is not None and active_chord_started_at is not None:

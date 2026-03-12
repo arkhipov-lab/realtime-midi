@@ -19,7 +19,6 @@ def _score_event_against_key(event: ChordEvent, tonic_pc: int, mode: str) -> int
 
     score = 0
 
-    # Чем больше нот аккорда попадает в тональность, тем лучше
     for rel_pc in relative_pcs:
         if rel_pc in scale:
             score += 10
@@ -30,7 +29,6 @@ def _score_event_against_key(event: ChordEvent, tonic_pc: int, mode: str) -> int
     if winner is not None:
         root_rel = (winner.root_pc - tonic_pc) % 12
 
-        # Устойчивые ступени I, IV, V
         if root_rel == 0:
             score += 18
         elif root_rel in (5, 7):
@@ -38,11 +36,14 @@ def _score_event_against_key(event: ChordEvent, tonic_pc: int, mode: str) -> int
         elif root_rel in (2, 4, 9):
             score += 6
 
-    # Длительные аккорды должны весить больше
     duration_weight = min(int(event.duration_ms // 250), 6)
     score += duration_weight
 
     return score
+
+
+def score_key_hypothesis(events: List[ChordEvent], tonic_pc: int, mode: str) -> int:
+    return sum(_score_event_against_key(event, tonic_pc, mode) for event in events)
 
 
 def detect_key_hypothesis(events: List[ChordEvent]) -> Optional[KeyHypothesis]:
@@ -53,10 +54,7 @@ def detect_key_hypothesis(events: List[ChordEvent]) -> Optional[KeyHypothesis]:
 
     for tonic_pc in range(12):
         for mode in ('major', 'minor'):
-            score = 0
-
-            for event in events:
-                score += _score_event_against_key(event, tonic_pc, mode)
+            score = score_key_hypothesis(events, tonic_pc, mode)
 
             hypothesis = KeyHypothesis(
                 tonic_pc=tonic_pc,
