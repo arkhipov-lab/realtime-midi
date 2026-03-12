@@ -1,4 +1,12 @@
 from models.context_analysis import ContextAnalysisResult
+from theory.notes import pitch_class_to_name
+
+
+def format_key_hypothesis(key_hypothesis) -> str:
+    if key_hypothesis is None:
+        return 'None'
+    tonic = pitch_class_to_name(key_hypothesis.tonic_pc)
+    return f'{tonic} {key_hypothesis.mode} ({key_hypothesis.score})'
 
 
 def print_context_result(result: ContextAnalysisResult) -> None:
@@ -18,7 +26,7 @@ def print_context_result(result: ContextAnalysisResult) -> None:
     else:
         print('DEBUG: context_top3 = []')
 
-    print(f'DEBUG: key_hypothesis = {result.key_hypothesis}')
+    print(f'DEBUG: key_hypothesis = {format_key_hypothesis(result.key_hypothesis)}')
     print(f'DEBUG: functional_label = {result.functional_label}')
     print(f'DEBUG: cadence_label = {result.cadence_label}')
     print(f'DEBUG: movement_label = {result.movement_label}')

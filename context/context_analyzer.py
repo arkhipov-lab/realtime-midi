@@ -2,6 +2,7 @@ from models.context_analysis import ContextAnalysisResult
 from models.stateless_analysis import StatelessAnalysis
 from models.chord_candidate import ChordCandidate
 from context.history_buffer import ChordHistoryBuffer
+from context.key_hypothesis import detect_key_hypothesis
 
 
 class ContextAnalyzer:
@@ -49,12 +50,13 @@ class ContextAnalyzer:
         history_buffer: ChordHistoryBuffer,
     ) -> ContextAnalysisResult:
         latest_event = history_buffer.get_latest()
+        key_hypothesis = detect_key_hypothesis(history_buffer.get_all())
 
         if latest_event is None or latest_event.analysis.stateless_winner is None:
             return ContextAnalysisResult(
                 context_winner=stateless_analysis.stateless_winner,
                 ranked_candidates=stateless_analysis.ranked_candidates,
-                key_hypothesis=None,
+                key_hypothesis=key_hypothesis,
                 functional_label=None,
                 cadence_label=None,
                 movement_label=None,
@@ -81,7 +83,7 @@ class ContextAnalyzer:
         return ContextAnalysisResult(
             context_winner=context_winner,
             ranked_candidates=ranked_candidates,
-            key_hypothesis=None,
+            key_hypothesis=key_hypothesis,
             functional_label=None,
             cadence_label=None,
             movement_label=movement_label,
