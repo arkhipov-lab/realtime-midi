@@ -5,3 +5,4 @@ PREFER_SLASH_CHORDS = False
 SHOW_UNKNOWN_VOICINGS = True
 STABILIZE_MS = 60
 CHORD_BUFFER_SIZE = 16
+ANALYSIS_MODE = 'stateless'  # 'stateless' | 'context'

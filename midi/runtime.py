@@ -3,7 +3,7 @@ import time
 
 import mido
 
-from config import STABILIZE_MS, CHORD_BUFFER_SIZE
+from config import STABILIZE_MS, CHORD_BUFFER_SIZE, ANALYSIS_MODE
 from detection.candidate_selector import choose_best_chord_candidate
 from formatting.candidate_formatting import format_candidate_notes
 from formatting.chord_name import format_candidate_chord_name
@@ -15,6 +15,8 @@ from context.event_factory import build_chord_event
 from context.history_buffer import ChordHistoryBuffer
 from detection.stateless_analyzer import analyze_notes_stateless
 from context.history_debug import print_recent_chords
+
+from context.context_analyzer import ContextAnalyzer
 
 
 Signature = Tuple[str, Tuple[int, ...]]
@@ -73,6 +75,7 @@ def run_midi_listener(
     active_chord_analysis = None
 
     history_buffer = ChordHistoryBuffer(max_size=CHORD_BUFFER_SIZE)
+    context_analyzer = ContextAnalyzer()
 
     with mido.open_input(port_name) as inport:
         while True:
@@ -119,7 +122,14 @@ def run_midi_listener(
 
                     else:
                         analysis = analyze_notes_stateless(pending_notes)
-                        best_candidate = analysis.stateless_winner
+                        if ANALYSIS_MODE == 'context':
+                            context_result = context_analyzer.analyze(
+                                stateless_analysis=analysis,
+                                history_buffer=history_buffer,
+                            )
+                            best_candidate = context_result.context_winner
+                        else:
+                            best_candidate = analysis.stateless_winner
 
                         # Если уже был активный аккорд — закрываем его
                         if active_chord_signature is not None and active_chord_analysis is not None and active_chord_started_at is not None:
