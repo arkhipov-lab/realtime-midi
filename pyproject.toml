@@ -3,6 +3,7 @@ version_toml = []
 branch = "main"
 upload_to_vcs_release = true
 build_command = ""
+version_files = ["VERSION"]
 
 [tool.semantic_release.commit_parser_options]
 allowed_tags = ["feat", "fix", "perf", "refactor"]
